@@ -2,35 +2,22 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const mongoose = require('mongoose');
 
-// Mongoose internally uses a promise-like object,
-// but its better to make Mongoose use built in es6 promises
 mongoose.Promise = global.Promise;
 
-// config.js is where we control constants for entire
-// app like PORT and DATABASE_URL
 const {PORT, DATABASE_URL} = require('./config');
 const {Blog} = require('./models');
 
 const app = express();
 app.use(bodyParser.json());
 
-
-// GET requests to /blogs => return 10 blogs
 app.get('/posts', (req, res) => {
   Blog
     .find()
-    // we're limiting because blogs db has > 25,000
-    // documents, and that's too much to process/return
-    .limit(10)
-    // `exec` returns a promise
     .exec()
-    // success callback: for each blog we got back, we'll
-    // call the `.apiRepr` instance method we've created in
-    // models.js in order to only expose the data we want the API return.
-    .then(Blogs => {
+    .then(posts => {
       res.json({
-        Blogs: Blogs.map(
-          (Blog) => Blog.apiRepr())
+        Blogs: posts.map(
+          (Blog) => posts.apiRepr())
       });
     })
     .catch(
@@ -40,11 +27,8 @@ app.get('/posts', (req, res) => {
     });
 });
 
-// can also request by ID
 app.get('/blogs/:id', (req, res) => {
   blog
-    // this is a convenience method Mongoose provides for searching
-    // by the object _id property
     .findById(req.params.id)
     .exec()
     .then(blog =>res.json(blog.apiRepr()))
@@ -56,7 +40,6 @@ app.get('/blogs/:id', (req, res) => {
 
 
 app.post('/posts', (req, res) => {
-
   const requiredFields = ['title', 'author', 'content'];
   for (let i=0; i<requiredFields.length; i++) {
     const field = requiredFields[i];
@@ -83,7 +66,6 @@ app.post('/posts', (req, res) => {
 
 
 app.put('/posts/:id', (req, res) => {
-  // ensure that the id in the request path and the one in request body match
   if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
     const message = (
       `Request path id (${req.params.id}) and request body id ` +
@@ -92,12 +74,8 @@ app.put('/posts/:id', (req, res) => {
     res.status(400).json({message: message});
   }
 
-  // we only support a subset of fields being updateable.
-  // if the user sent over any of the updatableFields, we udpate those values
-  // in document
   const toUpdate = {};
   const updateableFields = ['title', 'author', 'content'];
-
   updateableFields.forEach(field => {
     if (field in req.body) {
       toUpdate[field] = req.body[field];
@@ -105,7 +83,6 @@ app.put('/posts/:id', (req, res) => {
   });
 
   blog
-    // all key/value pairs in toUpdate will be updated -- that's what `$set` does
     .findByIdAndUpdate(req.params.id, {$set: toUpdate})
     .exec()
     .then(blog => res.status(204).end())
@@ -120,19 +97,13 @@ app.delete('/posts/:id', (req, res) => {
     .catch(err => res.status(500).json({message: 'Internal server error'}));
 });
 
-// catch-all endpoint if client makes request to non-existent endpoint
 app.use('*', function(req, res) {
   res.status(404).json({message: 'Not Found'});
 });
-
-// closeServer needs access to a server object, but that only
-// gets created when `runServer` runs, so we declare `server` here
-// and then assign a value to it in run
 let server;
 
-// this function connects to our database, then starts the server
-function runServer(databaseUrl=DATABASE_URL, port=PORT) {
 
+function runServer(databaseUrl=DATABASE_URL, port=PORT) {
   return new Promise((resolve, reject) => {
     mongoose.connect(databaseUrl, err => {
       if (err) {
@@ -150,8 +121,6 @@ function runServer(databaseUrl=DATABASE_URL, port=PORT) {
   });
 }
 
-// this function closes the server, and returns a promise. we'll
-// use it in our integration tests later.
 function closeServer() {
   return mongoose.disconnect().then(() => {
      return new Promise((resolve, reject) => {

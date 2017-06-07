@@ -55,9 +55,9 @@ app.get('/blogs/:id', (req, res) => {
 });
 
 
-app.post('/blogs', (req, res) => {
+app.post('/posts', (req, res) => {
 
-  const requiredFields = ['name', 'borough', 'cuisine'];
+  const requiredFields = ['title', 'author', 'content'];
   for (let i=0; i<requiredFields.length; i++) {
     const field = requiredFields[i];
     if (!(field in req.body)) {
@@ -69,11 +69,10 @@ app.post('/blogs', (req, res) => {
 
   blog
     .create({
-      name: req.body.name,
-      borough: req.body.borough,
-      cuisine: req.body.cuisine,
-      grades: req.body.grades,
-      address: req.body.address})
+      title: req.body.title,
+      author: req.body.author,
+      content: req.body.content
+    })
     .then(
       blog => res.status(201).json(blog.apiRepr()))
     .catch(err => {
@@ -83,7 +82,7 @@ app.post('/blogs', (req, res) => {
 });
 
 
-app.put('/blogs/:id', (req, res) => {
+app.put('/posts/:id', (req, res) => {
   // ensure that the id in the request path and the one in request body match
   if (!(req.params.id && req.body.id && req.params.id === req.body.id)) {
     const message = (
@@ -97,7 +96,7 @@ app.put('/blogs/:id', (req, res) => {
   // if the user sent over any of the updatableFields, we udpate those values
   // in document
   const toUpdate = {};
-  const updateableFields = ['name', 'borough', 'cuisine', 'address'];
+  const updateableFields = ['title', 'author', 'content'];
 
   updateableFields.forEach(field => {
     if (field in req.body) {
@@ -113,7 +112,7 @@ app.put('/blogs/:id', (req, res) => {
     .catch(err => res.status(500).json({message: 'Internal server error'}));
 });
 
-app.delete('/blogs/:id', (req, res) => {
+app.delete('/posts/:id', (req, res) => {
   blog
     .findByIdAndRemove(req.params.id)
     .exec()
